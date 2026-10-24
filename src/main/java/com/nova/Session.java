@@ -39,6 +39,9 @@ public final class Session {
 	private final Map<String, Pending> pending = new HashMap<>();
 	private final List<Pattern> winP = new ArrayList<>(), lossP = new ArrayList<>();
 
+	public int seen;
+	public String lastPay = "";
+
 	public Auction cur;
 	public Record banner;
 	public long bannerUntil;
@@ -137,6 +140,8 @@ public final class Session {
 	// ---------- Chat ----------
 
 	public void onChat(String s) {
+		seen++;
+		if (s.toLowerCase().contains("paid")) lastPay = s;
 		if (cur != null) {
 			Matcher m = paidYou.matcher(s);
 			if (m.find()) {
@@ -176,10 +181,24 @@ public final class Session {
 		}
 		Matcher out = youPaid.matcher(s);
 		if (!out.find()) return;
-		String who = out.group(1).toLowerCase();
+		payout(out.group(1), Money.parse(out.group(2)));
+	}
+
+	/** Called when you run a command. /pay <player> <amount> counts as paying out, even if the server prints nothing. */
+	public void onCommand(String cmd) {
+		if (!gambleOn || cur != null || !cfg.autoGamble) return;
+		Matcher m = Pattern.compile("(?i)^/?pay\\s+(\\S+)\\s+(\\S+)").matcher(cmd.trim());
+		if (m.find()) payout(m.group(1), Money.parse(m.group(2)));
+	}
+
+	private void payout(String name, long b) {
+		String who = name.toLowerCase();
 		Pending p = pending.get(who);
 		if (p == null) return;
-		long b = Money.parse(out.group(2));
+		if (now() - p.time > cfg.windowSec * 1000L) {
+			pending.remove(who);
+			return;
+		}
 		if (b >= p.amt * cfg.payoutMultiplier) {
 			wins--;
 			gambleNet -= p.amt;
