@@ -13,7 +13,7 @@ import net.minecraft.resources.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 public class NovaClient implements ClientModInitializer {
-	public static KeyMapping MENU, WIN, LOSS;
+	public static KeyMapping MENU, WIN, LOSS, RESET;
 
 	@Override
 	public void onInitializeClient() {
@@ -22,10 +22,13 @@ public class NovaClient implements ClientModInitializer {
 		WIN = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.nova.win", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_KP_1, cat));
 		LOSS = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.nova.loss", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_KP_2, cat));
 
+		RESET = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.nova.reset", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_KP_0, cat));
+
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
 			while (MENU.consumeClick()) mc.setScreen(new NovaScreen());
 			while (WIN.consumeClick()) Session.I.manual(true);
 			while (LOSS.consumeClick()) Session.I.manual(false);
+			while (RESET.consumeClick()) Session.I.resetProfit();
 			Session.I.tick(mc);
 		});
 
