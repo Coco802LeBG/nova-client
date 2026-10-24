@@ -187,6 +187,9 @@ public class NovaScreen extends Screen {
 			g.drawString(font, "Net: " + Money.signed(s.gambleNet), cx, y0 + 106, s.gambleNet >= 0 ? NovaHud.GREEN : NovaHud.RED);
 			g.drawString(font, "Auto: paid you = win, you pay back 2x = loss", cx, y0 + 172, NovaHud.MUTED);
 			g.drawString(font, "Numpad 1 = win, Numpad 2 = loss (menu closed)", cx, y0 + 184, NovaHud.MUTED);
+			String lp = s.lastPay.isEmpty() ? "(none yet)" : s.lastPay;
+			if (lp.length() > 46) lp = lp.substring(0, 46) + "...";
+			g.drawString(font, "Messages seen: " + s.seen + "  Last pay: " + lp, cx, y0 + 198, NovaHud.ACCENT2);
 		} else {
 			g.drawString(font, "Settings", cx, y0 + 14, NovaHud.WHITE);
 			g.drawString(font, "Saved automatically in config/nova.json", cx, y0 + 216, NovaHud.MUTED);
