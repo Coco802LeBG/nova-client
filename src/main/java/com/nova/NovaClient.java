@@ -29,7 +29,7 @@ public class NovaClient implements ClientModInitializer {
 		});
 
 		ClientReceiveMessageEvents.GAME.register((msg, overlay) -> {
-			if (!overlay) Session.I.onChat(msg.getString());
+			Session.I.onChat(msg.getString());
 		});
 
 		HudElementRegistry.attachElementAfter(VanillaHudElements.CHAT, Identifier.fromNamespaceAndPath("nova", "hud"), NovaHud::render);
