@@ -3,6 +3,7 @@ package com.nova;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -81,6 +82,17 @@ public final class Session {
 		a.totalSec = sec;
 		a.endMs = now() + sec * 1000L;
 		cur = a;
+	}
+
+	/** Shows the win banner (with confetti) without touching any stats. */
+	public void preview(ItemStack held) {
+		Record r = new Record();
+		r.stack = held.isEmpty() ? new ItemStack(Items.ELYTRA) : held.copy();
+		r.qty = 1;
+		r.top = 368_000_000L;
+		r.by = "Preview";
+		banner = r;
+		bannerUntil = now() + 6000;
 	}
 
 	public void cancel() {
