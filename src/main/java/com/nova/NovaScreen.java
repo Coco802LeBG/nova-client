@@ -99,7 +99,8 @@ public class NovaScreen extends Screen {
 			add("+ Win", cx, y0 + 132, 54, () -> s.manual(true));
 			add("+ Loss", cx + 58, y0 + 132, 54, () -> s.manual(false));
 			add("Undo", cx + 116, y0 + 132, 54, s::undo);
-			add("Reset", cx, y0 + 156, 170, s::resetGamble);
+			add("Reset W/L", cx, y0 + 156, 84, s::resetGamble);
+			add("Reset profit", cx + 86, y0 + 156, 84, s::resetProfit);
 		} else {
 			int lx = cx, rx = cx + 156, y = y0 + 34, d = 22, bw = 150;
 			add("Theme: " + cfg.theme, lx, y, bw, () -> { cfg.theme = NovaHud.nextTheme(cfg.theme); upd(); });
