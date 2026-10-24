@@ -251,6 +251,17 @@ public final class Session {
 		if (l[0] == 1) { wins--; gambleNet -= l[1]; } else { losses--; gambleNet += l[1]; }
 	}
 
+	/** Sets Session Profit back to $0 (keeps the win/loss counters). */
+	public void resetProfit() {
+		auctionSales = 0;
+		gambleNet = 0;
+		lastDelta = 0;
+		gambleLog.clear();
+		pending.clear();
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.player != null) mc.player.displayClientMessage(Component.literal("[Nova] Session profit reset"), true);
+	}
+
 	public void resetGamble() {
 		wins = losses = 0;
 		gambleNet = 0;
