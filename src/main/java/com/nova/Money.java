@@ -12,7 +12,7 @@ public final class Money {
 	/** "10k" -> 10000, "1.5M" -> 1500000, "$2,000" -> 2000. Returns 0 if invalid. */
 	public static long parse(String s) {
 		if (s == null) return 0;
-		Matcher m = P.matcher(s.trim().toLowerCase(Locale.ROOT).replace(",", "").replace("$", ""));
+		Matcher m = P.matcher(s.trim().toLowerCase(Locale.ROOT).replace(",", "").replace("$", "").replaceAll("[.]+$", ""));
 		if (!m.matches()) return 0;
 		double n = Double.parseDouble(m.group(1));
 		double mul = switch (m.group(2)) {
