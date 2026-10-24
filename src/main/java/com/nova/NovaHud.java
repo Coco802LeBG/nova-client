@@ -46,7 +46,7 @@ public final class NovaHud {
 			text(g, f, a.top > 0 ? "Bid " + Money.fmt(a.top) + " (" + a.by + ")" : "No bids", x + 32, y + 19, 0.9f, MUTED);
 			text(g, f, "Min " + Money.fmt(a.min) + (a.worth > 0 ? "  Worth " + Money.fmt(a.worth) : ""), x + 32, y + 29, 0.75f, MUTED);
 			String t = String.format("%d:%02d", (int) left / 60, (int) left % 60);
-			text(g, f, t, x + w - 8 - f.width(t) * 1.4f > 0 ? (int) (x + w - 10 - f.width(t) * 1.4f) : x, y + 10, 1.4f, urgent ? RED : WHITE);
+			text(g, f, t, (int) (x + w - 10 - f.width(t) * 1.4f), y + 10, 1.4f, urgent ? RED : WHITE);
 			int bw = (int) ((w - 8) * Math.min(1.0, left / a.totalSec));
 			g.fill(x + 4, y + h - 6, x + w - 4, y + h - 3, 0x30FFFFFF);
 			g.fill(x + 4, y + h - 6, x + 4 + bw, y + h - 3, urgent ? RED : BORDER);
@@ -56,7 +56,7 @@ public final class NovaHud {
 			g.renderItem(r.stack, x + 8, y + 8);
 			text(g, f, r.by, x + 32, y + 7, 1.1f, WHITE);
 			text(g, f, "won for " + Money.fmt(r.top), x + 32, y + 21, 0.95f, GREEN);
-			text(g, f, "Name copied", x + w - 8 - f.width("Name copied") * 0.8f, y + 8, 0.8f, MUTED);
+			text(g, f, "Name copied", (int) (x + w - 8 - f.width("Name copied") * 0.8f), y + 8, 0.8f, MUTED);
 		}
 
 		// ----- Session profit (top right) -----
