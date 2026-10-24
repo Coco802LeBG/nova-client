@@ -25,6 +25,26 @@ public class NovaConfig {
 	public List<String> winPatterns = List.of("(?i)you won(?: \\$?(?<amt>[\\d.,]+[kmbt]?))?");
 	public List<String> lossPatterns = List.of("(?i)you lost(?: \\$?(?<amt>[\\d.,]+[kmbt]?))?");
 
+	// ---- Look & feel (also editable in the menu: Settings) ----
+	public String theme = "Purple";           // Purple, Blue, Pink, Green, Cyan, Orange, Red
+	public boolean animations = true;
+	public double animSpeed = 1.0;
+	public double hudScale = 1.0;
+	public String profitCorner = "TR";        // TL, TR, BL, BR
+	public boolean toastBottom = false;
+	public boolean confetti = true;
+	public boolean menuAnim = true;
+	public boolean showProfit = true;
+	public boolean showToast = true;
+	public boolean showGambleLine = true;
+
+	public void save() {
+		try {
+			Files.writeString(path(), GSON.toJson(this));
+		} catch (Exception ignored) {
+		}
+	}
+
 	public static Path path() {
 		return FabricLoader.getInstance().getConfigDir().resolve("nova.json");
 	}
