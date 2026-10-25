@@ -14,7 +14,28 @@ public final class Nick {
 	private static final int[] RGB = { 0xFFFFFF, 0xFF5555, 0xFFAA00, 0xFFFF55, 0x55FF55, 0x55FFFF, 0x5555FF, 0xAA55FF, 0xFF55FF, 0xAAAAAA, 0, 0 };
 	public static final String[] SYMBOLS = { "", "\u2605", "\u2726", "\u2764", "\u2620", "\u2694", "\u265B", "\u26A1", "\u2744", "\u2600", "\u273F", "\u266A", "\u262F", "\u2714" };
 
+	public static final String[] STAR_SYMBOLS = { "\u2605", "\u2726", "\u2727", "\u272A", "\u272F", "\u2736", "\u2742", "\u2739" };
+	public static final String[] STAR_POS = { "Before", "After", "Both" };
+
 	private Nick() {}
+
+	public static String nextStar(String cur) {
+		for (int i = 0; i < STAR_SYMBOLS.length; i++) if (STAR_SYMBOLS[i].equals(cur)) return STAR_SYMBOLS[(i + 1) % STAR_SYMBOLS.length];
+		return STAR_SYMBOLS[0];
+	}
+
+	public static String nextPos(String cur) {
+		for (int i = 0; i < STAR_POS.length; i++) if (STAR_POS[i].equalsIgnoreCase(cur)) return STAR_POS[(i + 1) % STAR_POS.length];
+		return STAR_POS[0];
+	}
+
+	private static MutableComponent stars(Style st, NovaConfig c) {
+		MutableComponent out = Component.empty();
+		int n = Math.max(0, Math.min(5, c.nickStars));
+		for (int i = 0; i < n; i++)
+			out.append(Component.literal(c.nickStarSymbol).withStyle(st.withColor(TextColor.fromRgb(colorAt(c.nickStarColor, i, n)))));
+		return out;
+	}
 
 	public static String next(String cur) {
 		for (int i = 0; i < COLORS.length; i++) if (COLORS[i].equalsIgnoreCase(cur)) return COLORS[(i + 1) % COLORS.length];
@@ -52,8 +73,13 @@ public final class Nick {
 		Style st = c.nickBold ? base.withBold(true) : base;
 		MutableComponent out = Component.empty();
 		if (!c.nickPrefix.isBlank()) out.append(Component.literal(c.nickPrefix + " ").withStyle(st));
+		boolean hasStars = c.nickStars > 0;
+		boolean before = hasStars && !c.nickStarPos.equalsIgnoreCase("After");
+		boolean after = hasStars && !c.nickStarPos.equalsIgnoreCase("Before");
+		if (before) out.append(stars(st, c)).append(Component.literal(" ").withStyle(st));
 		for (int i = 0; i < name.length(); i++)
 			out.append(Component.literal(String.valueOf(name.charAt(i))).withStyle(st.withColor(TextColor.fromRgb(colorAt(c.nickColor, i, name.length())))));
+		if (after) out.append(Component.literal(" ").withStyle(st)).append(stars(st, c));
 		if (!c.nickSuffix.isBlank()) out.append(Component.literal(" " + c.nickSuffix).withStyle(st));
 		return out;
 	}
