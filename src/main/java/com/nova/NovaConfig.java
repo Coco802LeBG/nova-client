@@ -25,6 +25,13 @@ public class NovaConfig {
 	public List<String> winPatterns = List.of("(?i)you won(?: \\$?(?<amt>[\\d.,]+[kmbt]?))?");
 	public List<String> lossPatterns = List.of("(?i)you lost(?: \\$?(?<amt>[\\d.,]+[kmbt]?))?");
 
+	// ---- Nametag (client-side only: you see it, other players do not) ----
+	public boolean nickEnabled = false;
+	public String nickColor = "Purple";
+	public boolean nickBold = false;
+	public String nickPrefix = "";
+	public String nickSuffix = "";
+
 	public int configVersion = 0;
 	private static final int CURRENT = 2;
 
