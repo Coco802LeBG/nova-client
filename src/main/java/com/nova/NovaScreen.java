@@ -107,20 +107,24 @@ public class NovaScreen extends Screen {
 		} else if (tab == 4) {
 			add("Reset balance", cx, y0 + 168, 170, s::resetBalance);
 		} else if (tab == 5) {
-			add("Nametag: " + onoff(cfg.nickEnabled), cx, y0 + 34, 170, () -> { cfg.nickEnabled = !cfg.nickEnabled; upd(); });
-			add("Color: " + cfg.nickColor, cx, y0 + 58, 170, () -> { cfg.nickColor = Nick.next(cfg.nickColor); upd(); });
-			add("Bold: " + onoff(cfg.nickBold), cx, y0 + 82, 170, () -> { cfg.nickBold = !cfg.nickBold; upd(); });
-			EditBox pre = new EditBox(font, cx, y0 + 122, 80, 18, c("Prefix"));
+			int lx = cx, rx = cx + 156, y = y0 + 34, bw = 150;
+			add("Nametag: " + onoff(cfg.nickEnabled), lx, y, bw, () -> { cfg.nickEnabled = !cfg.nickEnabled; upd(); });
+			add("Bold: " + onoff(cfg.nickBold), rx, y, bw, () -> { cfg.nickBold = !cfg.nickBold; upd(); });
+			add("Name color: " + cfg.nickColor, lx, y + 22, bw, () -> { cfg.nickColor = Nick.next(cfg.nickColor); upd(); });
+			add("Star color: " + cfg.nickStarColor, rx, y + 22, bw, () -> { cfg.nickStarColor = Nick.next(cfg.nickStarColor); upd(); });
+			add("Stars: " + cfg.nickStars, lx, y + 44, bw, () -> { cfg.nickStars = (cfg.nickStars + 1) % 6; upd(); });
+			add("Star style: " + cfg.nickStarSymbol, rx, y + 44, bw, () -> { cfg.nickStarSymbol = Nick.nextStar(cfg.nickStarSymbol); upd(); });
+			add("Stars position: " + cfg.nickStarPos, lx, y + 66, bw, () -> { cfg.nickStarPos = Nick.nextPos(cfg.nickStarPos); upd(); });
+			EditBox pre = new EditBox(font, lx, y0 + 140, 72, 18, c("Prefix"));
 			pre.setMaxLength(12);
 			pre.setValue(cfg.nickPrefix);
 			pre.setResponder(v -> { cfg.nickPrefix = v; cfg.save(); });
 			addRenderableWidget(pre);
-			EditBox suf = new EditBox(font, cx + 90, y0 + 122, 80, 18, c("Suffix"));
+			EditBox suf = new EditBox(font, lx + 78, y0 + 140, 72, 18, c("Suffix"));
 			suf.setMaxLength(12);
 			suf.setValue(cfg.nickSuffix);
 			suf.setResponder(v -> { cfg.nickSuffix = v; cfg.save(); });
 			addRenderableWidget(suf);
-			add("Quick suffix symbol", cx, y0 + 146, 170, () -> { cfg.nickSuffix = Nick.nextSymbol(cfg.nickSuffix); upd(); });
 		} else {
 			int lx = cx, rx = cx + 156, y = y0 + 34, d = 22, bw = 150;
 			add("Theme: " + cfg.theme, lx, y, bw, () -> { cfg.theme = NovaHud.nextTheme(cfg.theme); upd(); });
@@ -236,10 +240,9 @@ public class NovaScreen extends Screen {
 			g.drawString(font, "Sent counts /pay commands you type.", cx, y0 + 198, NovaHud.MUTED);
 		} else if (tab == 5) {
 			g.drawString(font, "Nametag", cx, y0 + 14, NovaHud.WHITE);
-			g.drawString(font, "Prefix", cx, y0 + 110, NovaHud.MUTED);
-			g.drawString(font, "Suffix", cx + 90, y0 + 110, NovaHud.MUTED);
-			g.drawString(font, "Preview:", cx, y0 + 174, NovaHud.MUTED);
-			g.drawString(font, Nick.styled(Minecraft.getInstance().getUser().getName(), net.minecraft.network.chat.Style.EMPTY), cx + 50, y0 + 174, NovaHud.WHITE);
+			g.drawString(font, "Extra text before / after (optional)", cx, y0 + 128, NovaHud.MUTED);
+			g.drawString(font, "Preview:", cx, y0 + 172, NovaHud.MUTED);
+			g.drawString(font, Nick.styled(Minecraft.getInstance().getUser().getName(), net.minecraft.network.chat.Style.EMPTY), cx + 50, y0 + 172, NovaHud.WHITE);
 			g.drawString(font, "Only you see this (chat messages with your name).", cx, y0 + 198, NovaHud.MUTED);
 		} else {
 			g.drawString(font, "Settings", cx, y0 + 14, NovaHud.WHITE);
