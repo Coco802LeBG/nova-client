@@ -34,11 +34,23 @@ public final class Session {
 	private static class Pending {
 		long amt, time;
 		long[] entry;
-		Pending(long a, long t, long[] e) { amt = a; time = t; entry = e; }
+		Bet bet;
+		Pending(long a, long t, long[] e, Bet b) { amt = a; time = t; entry = e; bet = b; }
 	}
 	private final Map<String, Pending> pending = new HashMap<>();
 	private final List<Pattern> winP = new ArrayList<>(), lossP = new ArrayList<>();
 
+	public static class Bet {
+		public String who = "manual";
+		public long amt, time;
+		public boolean win;
+	}
+
+	public final List<Bet> bets = new ArrayList<>();
+	public long received, sent;
+	public long startMs = System.currentTimeMillis();
+	private String lastRaw = "";
+	private long lastRawMs;
 	public int seen;
 	public String lastPay = "";
 
@@ -142,6 +154,12 @@ public final class Session {
 	public void onChat(String s) {
 		seen++;
 		if (s.toLowerCase().contains("paid")) lastPay = s;
+		long tn = now();
+		if (s.equals(lastRaw) && tn - lastRawMs < 1500) return; // same line from chat + action bar
+		lastRaw = s;
+		lastRawMs = tn;
+		Matcher rm = paidYou.matcher(s);
+		if (rm.find()) received += Money.parse(rm.group(2));
 		if (cur != null) {
 			Matcher m = paidYou.matcher(s);
 			if (m.find()) {
@@ -175,7 +193,8 @@ public final class Session {
 			long a = Money.parse(in.group(2));
 			if (a > 0) {
 				gamble(true, a);
-				pending.put(in.group(1).toLowerCase(), new Pending(a, t, gambleLog.get(gambleLog.size() - 1)));
+				bets.get(0).who = in.group(1);
+				pending.put(in.group(1).toLowerCase(), new Pending(a, t, gambleLog.get(gambleLog.size() - 1), bets.get(0)));
 			}
 			return;
 		}
@@ -186,9 +205,17 @@ public final class Session {
 
 	/** Called when you run a command. /pay <player> <amount> counts as paying out, even if the server prints nothing. */
 	public void onCommand(String cmd) {
-		if (!gambleOn || cur != null || !cfg.autoGamble) return;
 		Matcher m = Pattern.compile("(?i)^/?pay\\s+(\\S+)\\s+(\\S+)").matcher(cmd.trim());
-		if (m.find()) payout(m.group(1), Money.parse(m.group(2)));
+		if (!m.find()) return;
+		long amt = Money.parse(m.group(2));
+		sent += amt;
+		if (gambleOn && cur == null && cfg.autoGamble) payout(m.group(1), amt);
+	}
+
+	public void resetBalance() {
+		received = 0;
+		sent = 0;
+		startMs = now();
 	}
 
 	private void payout(String name, long b) {
@@ -207,6 +234,8 @@ public final class Session {
 			gambleNet -= loss;
 			p.entry[0] = 0;
 			p.entry[1] = loss;
+			p.bet.win = false;
+			p.bet.amt = loss;
 			lastDelta = -loss;
 			pending.remove(who);
 		} else if (b >= p.amt * 0.99) {
@@ -214,6 +243,7 @@ public final class Session {
 			wins--;
 			gambleNet -= p.amt;
 			gambleLog.remove(p.entry);
+			bets.remove(p.bet);
 			lastDelta = 0;
 			pending.remove(who);
 		}
@@ -234,6 +264,12 @@ public final class Session {
 		if (win) { wins++; gambleNet += amount; lastDelta = amount; }
 		else { losses++; gambleNet -= amount; lastDelta = -amount; }
 		gambleLog.add(new long[] { win ? 1 : 0, amount });
+		Bet b = new Bet();
+		b.amt = amount;
+		b.win = win;
+		b.time = now();
+		bets.add(0, b);
+		if (bets.size() > 50) bets.remove(bets.size() - 1);
 	}
 
 	public void manual(boolean win) {
@@ -248,6 +284,7 @@ public final class Session {
 		if (gambleLog.isEmpty()) return;
 		long[] l = gambleLog.remove(gambleLog.size() - 1);
 		pending.values().removeIf(p -> p.entry == l);
+		if (!bets.isEmpty()) bets.remove(0);
 		if (l[0] == 1) { wins--; gambleNet -= l[1]; } else { losses--; gambleNet += l[1]; }
 	}
 
@@ -258,6 +295,7 @@ public final class Session {
 		lastDelta = 0;
 		gambleLog.clear();
 		pending.clear();
+		bets.clear();
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.player != null) mc.player.displayClientMessage(Component.literal("[Nova] Session profit reset"), true);
 	}
@@ -267,6 +305,7 @@ public final class Session {
 		gambleNet = 0;
 		gambleLog.clear();
 		pending.clear();
+		bets.clear();
 	}
 
 	public int winRate() {
