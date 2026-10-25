@@ -31,6 +31,10 @@ public class NovaConfig {
 	public boolean nickBold = false;
 	public String nickPrefix = "";
 	public String nickSuffix = "";
+	public int nickStars = 3;                 // 0 to 5
+	public String nickStarSymbol = "\u2605";
+	public String nickStarColor = "Yellow";   // same colors as the name, incl. Rainbow / Theme
+	public String nickStarPos = "Before";     // Before, After, Both
 
 	public int configVersion = 0;
 	private static final int CURRENT = 2;
