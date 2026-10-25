@@ -3,6 +3,7 @@ package com.nova;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
@@ -13,7 +14,7 @@ public class NovaScreen extends Screen {
 	private static final long[] MINS = { 1, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000 };
 	private static final int[] SECS = { 10, 15, 30, 60 };
 	private static final long[] WORTHS = { 0, 1_000_000, 10_000_000, 100_000_000, 500_000_000, 1_000_000_000 };
-	private static final String[] TABS = { "Auction", "Recent", "Gamble", "Settings" };
+	private static final String[] TABS = { "Auction", "Recent", "Bets", "Gamble", "Balance", "Nametag", "Settings" };
 	private static final double[] SPEEDS = { 0.5, 1.0, 1.5, 2.0 };
 	private static final double[] SCALES = { 0.75, 1.0, 1.25, 1.5 };
 	private static final String[] CORNERS = { "TL", "TR", "BL", "BR" };
@@ -95,12 +96,31 @@ public class NovaScreen extends Screen {
 			}
 			add("Clear history", cx, y0 + H - 32, 110, () -> { s.history.clear(); rebuildWidgets(); });
 		} else if (tab == 2) {
+			add("Clear bets", cx, y0 + H - 32, 110, () -> { s.bets.clear(); rebuildWidgets(); });
+		} else if (tab == 3) {
 			add("Tracker: " + onoff(s.gambleOn), cx, y0 + 40, 170, () -> { s.gambleOn = !s.gambleOn; rebuildWidgets(); });
 			add("+ Win", cx, y0 + 132, 54, () -> s.manual(true));
 			add("+ Loss", cx + 58, y0 + 132, 54, () -> s.manual(false));
 			add("Undo", cx + 116, y0 + 132, 54, s::undo);
 			add("Reset W/L", cx, y0 + 156, 84, s::resetGamble);
 			add("Reset profit", cx + 86, y0 + 156, 84, s::resetProfit);
+		} else if (tab == 4) {
+			add("Reset balance", cx, y0 + 168, 170, s::resetBalance);
+		} else if (tab == 5) {
+			add("Nametag: " + onoff(cfg.nickEnabled), cx, y0 + 34, 170, () -> { cfg.nickEnabled = !cfg.nickEnabled; upd(); });
+			add("Color: " + cfg.nickColor, cx, y0 + 58, 170, () -> { cfg.nickColor = Nick.next(cfg.nickColor); upd(); });
+			add("Bold: " + onoff(cfg.nickBold), cx, y0 + 82, 170, () -> { cfg.nickBold = !cfg.nickBold; upd(); });
+			EditBox pre = new EditBox(font, cx, y0 + 122, 80, 18, c("Prefix"));
+			pre.setMaxLength(12);
+			pre.setValue(cfg.nickPrefix);
+			pre.setResponder(v -> { cfg.nickPrefix = v; cfg.save(); });
+			addRenderableWidget(pre);
+			EditBox suf = new EditBox(font, cx + 90, y0 + 122, 80, 18, c("Suffix"));
+			suf.setMaxLength(12);
+			suf.setValue(cfg.nickSuffix);
+			suf.setResponder(v -> { cfg.nickSuffix = v; cfg.save(); });
+			addRenderableWidget(suf);
+			add("Quick suffix symbol", cx, y0 + 146, 170, () -> { cfg.nickSuffix = Nick.nextSymbol(cfg.nickSuffix); upd(); });
 		} else {
 			int lx = cx, rx = cx + 156, y = y0 + 34, d = 22, bw = 150;
 			add("Theme: " + cfg.theme, lx, y, bw, () -> { cfg.theme = NovaHud.nextTheme(cfg.theme); upd(); });
@@ -124,7 +144,7 @@ public class NovaScreen extends Screen {
 
 	@Override
 	public boolean keyPressed(KeyEvent event) {
-		if (NovaClient.MENU.matches(event)) {
+		if (NovaClient.MENU.matches(event) && !(getFocused() instanceof EditBox)) {
 			onClose();
 			return true;
 		}
@@ -158,7 +178,7 @@ public class NovaScreen extends Screen {
 		super.render(g, mx, my, pt);
 
 		g.drawString(font, "NOVA", x0 + 14, y0 + 14, NovaHud.ACCENT2);
-		g.drawString(font, Minecraft.getInstance().getUser().getName(), x0 + 14, y0 + H - 15, NovaHud.MUTED);
+		g.drawString(font, Nick.display(Minecraft.getInstance().getUser().getName()), x0 + 14, y0 + H - 15, NovaHud.MUTED);
 
 		if (tab == 0) {
 			ItemStack held = Minecraft.getInstance().player == null ? ItemStack.EMPTY : Minecraft.getInstance().player.getMainHandItem();
@@ -181,6 +201,15 @@ public class NovaScreen extends Screen {
 				g.drawString(font, r.top > 0 ? r.by + " won for $" + Money.fmt(r.top) : "No bids", cx + 22, y + 11, r.top > 0 ? NovaHud.GREEN : NovaHud.MUTED);
 			}
 		} else if (tab == 2) {
+			g.drawString(font, "Bets (" + s.bets.size() + ")", cx, y0 + 14, NovaHud.WHITE);
+			if (s.bets.isEmpty()) g.drawString(font, "No bets yet. Turn the tracker ON in Gamble.", cx, y0 + 44, NovaHud.MUTED);
+			for (int i = 0; i < Math.min(9, s.bets.size()); i++) {
+				Session.Bet b = s.bets.get(i);
+				int y = y0 + 34 + i * 16;
+				g.drawString(font, b.who, cx, y, NovaHud.WHITE);
+				g.drawString(font, (b.win ? "Win +$" : "Loss -$") + Money.fmt(b.amt), cx + 130, y, b.win ? NovaHud.GREEN : NovaHud.RED);
+			}
+		} else if (tab == 3) {
 			g.drawString(font, "Gamble tracker", cx, y0 + 14, NovaHud.WHITE);
 			g.drawString(font, "Wins: " + s.wins, cx, y0 + 70, NovaHud.GREEN);
 			g.drawString(font, "Losses: " + s.losses, cx, y0 + 82, NovaHud.RED);
@@ -191,6 +220,27 @@ public class NovaScreen extends Screen {
 			String lp = s.lastPay.isEmpty() ? "(none yet)" : s.lastPay;
 			if (lp.length() > 46) lp = lp.substring(0, 46) + "...";
 			g.drawString(font, "Messages seen: " + s.seen + "  Last pay: " + lp, cx, y0 + 198, NovaHud.ACCENT2);
+		} else if (tab == 4) {
+			long secs = (System.currentTimeMillis() - s.startMs) / 1000;
+			double hrs = Math.max(secs, 60) / 3600.0;
+			long perH = (long) (s.profit() / hrs);
+			g.drawString(font, "Balance", cx, y0 + 14, NovaHud.WHITE);
+			g.drawString(font, "Session time: " + (secs / 3600) + "h " + ((secs % 3600) / 60) + "m", cx, y0 + 38, NovaHud.MUTED);
+			g.drawString(font, "Received: $" + Money.fmt(s.received), cx, y0 + 54, NovaHud.GREEN);
+			g.drawString(font, "Sent (/pay): $" + Money.fmt(s.sent), cx, y0 + 66, NovaHud.RED);
+			g.drawString(font, "Net flow: " + Money.signed(s.received - s.sent), cx, y0 + 78, NovaHud.WHITE);
+			g.drawString(font, "Auction sales: " + Money.signed(s.auctionSales), cx, y0 + 98, NovaHud.WHITE);
+			g.drawString(font, "Gamble net: " + Money.signed(s.gambleNet), cx, y0 + 110, NovaHud.WHITE);
+			g.drawString(font, "Profit: " + Money.signed(s.profit()), cx, y0 + 122, s.profit() >= 0 ? NovaHud.GREEN : NovaHud.RED);
+			g.drawString(font, "Per hour: " + Money.signed(perH), cx, y0 + 138, NovaHud.ACCENT2);
+			g.drawString(font, "Sent counts /pay commands you type.", cx, y0 + 198, NovaHud.MUTED);
+		} else if (tab == 5) {
+			g.drawString(font, "Nametag", cx, y0 + 14, NovaHud.WHITE);
+			g.drawString(font, "Prefix", cx, y0 + 110, NovaHud.MUTED);
+			g.drawString(font, "Suffix", cx + 90, y0 + 110, NovaHud.MUTED);
+			g.drawString(font, "Preview:", cx, y0 + 174, NovaHud.MUTED);
+			g.drawString(font, Nick.styled(Minecraft.getInstance().getUser().getName(), net.minecraft.network.chat.Style.EMPTY), cx + 50, y0 + 174, NovaHud.WHITE);
+			g.drawString(font, "Only you see this (chat messages with your name).", cx, y0 + 198, NovaHud.MUTED);
 		} else {
 			g.drawString(font, "Settings", cx, y0 + 14, NovaHud.WHITE);
 			g.drawString(font, "Saved automatically in config/nova.json", cx, y0 + 216, NovaHud.MUTED);
