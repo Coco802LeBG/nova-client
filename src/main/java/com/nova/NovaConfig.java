@@ -36,8 +36,15 @@ public class NovaConfig {
 	public String nickStarColor = "Yellow";   // same colors as the name, incl. Rainbow / Theme
 	public String nickStarPos = "Before";     // Before, After, Both
 
+	// ---- Sounds ----
+	public boolean sounds = true;
+	public double soundVolume = 0.8;
+	public boolean soundTick = true;
+	public boolean soundMenu = true;
+	public boolean soundClick = true;
+
 	public int configVersion = 0;
-	private static final int CURRENT = 2;
+	private static final int CURRENT = 3;
 
 	// ---- Look & feel (also editable in the menu: Settings) ----
 	public String theme = "Purple";           // Purple, Blue, Pink, Green, Cyan, Orange, Red
@@ -64,27 +71,42 @@ public class NovaConfig {
 	}
 
 	public static NovaConfig load() {
+		NovaConfig defaults = new NovaConfig();
 		try {
 			Path p = path();
 			if (Files.exists(p)) {
 				NovaConfig c = GSON.fromJson(Files.readString(p), NovaConfig.class);
 				if (c != null) {
+					// Older configs may not contain newly added fields. Restore safe defaults
+					// without overwriting any values the user already customized.
+					if (c.paidYouPattern == null || c.paidYouPattern.isBlank()) c.paidYouPattern = defaults.paidYouPattern;
+					if (c.youPaidPattern == null || c.youPaidPattern.isBlank()) c.youPaidPattern = defaults.youPaidPattern;
+					if (c.winPatterns == null || c.winPatterns.isEmpty()) c.winPatterns = defaults.winPatterns;
+					if (c.lossPatterns == null || c.lossPatterns.isEmpty()) c.lossPatterns = defaults.lossPatterns;
+					if (c.nickColor == null) c.nickColor = defaults.nickColor;
+					if (c.nickStarColor == null) c.nickStarColor = defaults.nickStarColor;
+					if (c.nickStarSymbol == null) c.nickStarSymbol = defaults.nickStarSymbol;
+					if (c.nickStarPos == null) c.nickStarPos = defaults.nickStarPos;
+					if (c.nickPrefix == null) c.nickPrefix = defaults.nickPrefix;
+					if (c.nickSuffix == null) c.nickSuffix = defaults.nickSuffix;
+					if (c.theme == null) c.theme = defaults.theme;
+					if (c.profitCorner == null) c.profitCorner = defaults.profitCorner;
+					c.soundVolume = Math.max(0.0, Math.min(1.0, c.soundVolume));
 					if (c.configVersion < CURRENT) {
-						NovaConfig d = new NovaConfig();
-						c.paidYouPattern = d.paidYouPattern;
-						c.youPaidPattern = d.youPaidPattern;
+						// Click feedback was added in config version 3.
+						if (c.configVersion < 3) c.soundClick = true;
 						c.configVersion = CURRENT;
-						c.save();
 					}
+					c.save();
 					return c;
 				}
 			}
-			NovaConfig c = new NovaConfig();
-			c.configVersion = CURRENT;
-			Files.writeString(p, GSON.toJson(c));
-			return c;
+			defaults.configVersion = CURRENT;
+			defaults.save();
+			return defaults;
 		} catch (Exception e) {
-			return new NovaConfig();
+			return defaults;
 		}
 	}
+
 }
