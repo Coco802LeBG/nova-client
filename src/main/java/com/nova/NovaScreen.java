@@ -9,13 +9,17 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class NovaScreen extends Screen {
-	private static final int W = 420, H = 240;
+	private static final int W = 500, H = 260, ROWS = 5;
 	private static final long[] MINS = { 1, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000 };
 	private static final int[] SECS = { 10, 15, 30, 60 };
 	private static final long[] WORTHS = { 0, 1_000_000, 10_000_000, 100_000_000, 500_000_000, 1_000_000_000 };
 	private static final String[] TABS = { "Auction", "Recent", "Bets", "Gamble", "Balance", "Nametag", "Settings" };
 	private static final double[] SPEEDS = { 0.5, 1.0, 1.5, 2.0 };
+	private static final double[] VOLS = { 0.25, 0.5, 0.8, 1.0 };
 	private static final double[] SCALES = { 0.75, 1.0, 1.25, 1.5 };
 	private static final String[] CORNERS = { "TL", "TR", "BL", "BR" };
 
@@ -23,9 +27,12 @@ public class NovaScreen extends Screen {
 	private int x0, y0, cx;
 	private final long openMs = System.currentTimeMillis();
 	private float barY = -1;
+	private long tabMs = System.currentTimeMillis();
+	private static int histScroll = 0;
 
 	public NovaScreen() {
 		super(Component.literal("Nova"));
+		Sfx.menu();
 	}
 
 	@Override
@@ -55,6 +62,27 @@ public class NovaScreen extends Screen {
 		return CORNERS[0];
 	}
 
+	private List<Object> rowsData() {
+		List<Object> l = new ArrayList<>();
+		if (Session.I.cur != null) l.add(Session.I.cur);
+		l.addAll(Session.I.history);
+		return l;
+	}
+
+	@Override
+	public boolean mouseScrolled(double mx, double my, double sx, double sy) {
+		if (tab == 1) {
+			int max = Math.max(0, rowsData().size() - ROWS);
+			int n = (int) Math.max(0, Math.min(max, histScroll - Math.signum(sy)));
+			if (n != histScroll) {
+				histScroll = n;
+				rebuildWidgets();
+			}
+			return true;
+		}
+		return super.mouseScrolled(mx, my, sx, sy);
+	}
+
 	private void upd() {
 		Session.I.cfg.save();
 		rebuildWidgets();
@@ -70,7 +98,7 @@ public class NovaScreen extends Screen {
 
 		for (int i = 0; i < TABS.length; i++) {
 			final int t = i;
-			add(TABS[i], x0 + 10, y0 + 34 + i * 24, 82, () -> { tab = t; rebuildWidgets(); });
+			add(TABS[i], x0 + 10, y0 + 34 + i * 24, 82, () -> { tab = t; tabMs = System.currentTimeMillis(); histScroll = 0; rebuildWidgets(); });
 		}
 
 		if (tab == 0) {
@@ -89,12 +117,21 @@ public class NovaScreen extends Screen {
 				});
 			}
 		} else if (tab == 1) {
-			for (int i = 0; i < Math.min(5, s.history.size()); i++) {
-				final int k = i;
-				add("Redo", cx + 200, y0 + 40 + i * 28, 44, () -> { s.redo(s.history.get(k), SECS[secI]); s.history.remove(k); onClose(); });
-				add("X", cx + 248, y0 + 40 + i * 28, 20, () -> { s.history.remove(k); rebuildWidgets(); });
+			List<Object> d = rowsData();
+			histScroll = Math.min(histScroll, Math.max(0, d.size() - ROWS));
+			add("Clear History", x0 + W - 116, y0 + 12, 104, () -> { s.history.clear(); histScroll = 0; rebuildWidgets(); });
+			for (int i = 0; i < ROWS && histScroll + i < d.size(); i++) {
+				Object o = d.get(histScroll + i);
+				if (o instanceof Session.Record rec) {
+					int ry = y0 + 58 + i * 34;
+					Button rb = Button.builder(c("Redo"), b -> {
+						if (s.cur == null) { s.redo(rec, SECS[secI]); s.history.remove(rec); onClose(); }
+					}).bounds(cx + 282, ry + 6, 40, 20).build();
+					rb.active = s.cur == null;
+					addRenderableWidget(rb);
+					add("X", cx + 366, ry + 6, 18, () -> { s.history.remove(rec); rebuildWidgets(); });
+				}
 			}
-			add("Clear history", cx, y0 + H - 32, 110, () -> { s.history.clear(); rebuildWidgets(); });
 		} else if (tab == 2) {
 			add("Clear bets", cx, y0 + H - 32, 110, () -> { s.bets.clear(); rebuildWidgets(); });
 		} else if (tab == 3) {
@@ -142,7 +179,12 @@ public class NovaScreen extends Screen {
 				Minecraft mc = Minecraft.getInstance();
 				s.preview(mc.player == null ? ItemStack.EMPTY : mc.player.getMainHandItem());
 			});
-			add("Reload config", lx, y + 6 * d, bw, () -> { s.reload(); rebuildWidgets(); });
+			add("Sounds: " + onoff(cfg.sounds), lx, y + 6 * d, bw, () -> { cfg.sounds = !cfg.sounds; upd(); });
+			add("Volume: " + (int) Math.round(cfg.soundVolume * 100) + "%", rx, y + 6 * d, bw, () -> { cfg.soundVolume = nxt(cfg.soundVolume, VOLS); upd(); });
+			add("Tick sounds: " + onoff(cfg.soundTick), lx, y + 7 * d, bw, () -> { cfg.soundTick = !cfg.soundTick; upd(); });
+			add("Menu sound: " + onoff(cfg.soundMenu), rx, y + 7 * d, bw, () -> { cfg.soundMenu = !cfg.soundMenu; upd(); });
+			add("Test sounds", lx, y + 8 * d, bw, Sfx::test);
+			add("Reload config", rx, y + 8 * d, bw, () -> { s.reload(); rebuildWidgets(); });
 		}
 	}
 
@@ -195,15 +237,64 @@ public class NovaScreen extends Screen {
 			}
 			g.drawString(font, "Bids = chat lines \"X paid you $Y\"", cx, y0 + 184, NovaHud.MUTED);
 		} else if (tab == 1) {
-			g.drawString(font, "Recent auctions (" + s.history.size() + ")", cx, y0 + 14, NovaHud.WHITE);
-			if (s.history.isEmpty()) g.drawString(font, "Nothing yet.", cx, y0 + 44, NovaHud.MUTED);
-			for (int i = 0; i < Math.min(5, s.history.size()); i++) {
-				Session.Record r = s.history.get(i);
-				int y = y0 + 40 + i * 28;
-				g.renderItem(r.stack, cx, y + 1);
-				g.drawString(font, r.stack.getHoverName().getString() + " x" + r.qty, cx + 22, y, NovaHud.WHITE);
-				g.drawString(font, r.top > 0 ? r.by + " won for $" + Money.fmt(r.top) : "No bids", cx + 22, y + 11, r.top > 0 ? NovaHud.GREEN : NovaHud.MUTED);
+			g.drawString(font, "Recent Auctions", cx, y0 + 14, NovaHud.WHITE);
+			NovaHud.pill(g, font, String.valueOf(s.history.size()), cx + font.width("Recent Auctions") + 8, y0 + 11, NovaHud.PILL, NovaHud.ACCENT2, 0.8f);
+			NovaHud.text(g, font, "Your auction history. Press Redo to run one again.", cx, y0 + 31, 0.8f, NovaHud.MUTED);
+			List<Object> d = rowsData();
+			if (d.isEmpty()) g.drawString(font, "Nothing yet.", cx, y0 + 64, NovaHud.MUTED);
+			long ms = System.currentTimeMillis() - tabMs;
+			long nowMs = System.currentTimeMillis();
+			for (int i = 0; i < ROWS && histScroll + i < d.size(); i++) {
+				Object o = d.get(histScroll + i);
+				int ry = y0 + 58 + i * 34;
+				float pr = Math.max(0f, Math.min(1f, (ms - i * 55) / 240f));
+				float e = 1f - (1f - pr) * (1f - pr) * (1f - pr);
+				boolean live = o instanceof Session.Auction;
+				ItemStack st;
+				String name, sub, by = "";
+				long min, top, worth;
+				int qty;
+				if (o instanceof Session.Auction a) {
+					st = a.stack; qty = a.qty; min = a.min; top = a.top; worth = a.worth;
+					name = st.getHoverName().getString();
+					sub = "x" + qty + " \u2022 " + a.totalSec + "s timer";
+				} else {
+					Session.Record r = (Session.Record) o;
+					st = r.stack; qty = r.qty; min = r.min; top = r.top; worth = r.worth;
+					name = st.getHoverName().getString();
+					sub = "x" + qty + (r.top > 0 ? " \u2022 won by " + r.by : " \u2022 no bids");
+				}
+				long worthEach = qty > 0 ? worth / qty : 0;
+				g.pose().pushMatrix();
+				g.pose().translate((int) ((1f - e) * 26), 0);
+				NovaHud.rr(g, cx, ry, 388, 32, 8, live ? NovaHud.alpha(NovaHud.BORDER, (int) (0x90 * e)) : NovaHud.alpha(0x0C0618, (int) (0xCC * e)));
+				NovaHud.rr(g, cx + 1, ry + 1, 386, 30, 7, live ? NovaHud.alpha(0x160D2B, (int) (0xF0 * e)) : NovaHud.alpha(0x120A22, (int) (0xCC * e)));
+				if (live) NovaHud.rr(g, cx, ry + 5, 3, 22, 1, NovaHud.BORDER);
+				NovaHud.iconBox(g, st, cx + 6, ry + 3, 26);
+				NovaHud.text(g, font, name.length() > 16 ? name.substring(0, 16) : name, cx + 38, ry + 6, 1.0f, NovaHud.WHITE);
+				NovaHud.text(g, font, sub, cx + 38, ry + 19, 0.75f, NovaHud.MUTED);
+				NovaHud.text(g, font, "MIN BID", cx + 124, ry + 5, 0.55f, NovaHud.MUTED);
+				NovaHud.text(g, font, "$" + Money.fmt(min), cx + 124, ry + 15, 0.95f, NovaHud.WHITE);
+				NovaHud.text(g, font, "TOP BID", cx + 170, ry + 5, 0.55f, NovaHud.MUTED);
+				String tv = top > 0 ? "$" + Money.fmt(top) : "-";
+				NovaHud.text(g, font, tv, cx + 170, ry + 15, 0.95f, worth > 0 && top >= worth ? NovaHud.GREEN : NovaHud.WHITE);
+				if (worth > 0 && top > 0)
+					NovaHud.text(g, font, (top * 100 / worth) + "%", cx + 170 + NovaHud.tw(font, tv, 0.95f) + 3, ry + 17, 0.6f, NovaHud.MUTED);
+				NovaHud.text(g, font, "WORTH EACH", cx + 222, ry + 5, 0.55f, NovaHud.MUTED);
+				NovaHud.text(g, font, worthEach > 0 ? "$" + Money.fmt(worthEach) : "-", cx + 222, ry + 15, 0.95f, NovaHud.WHITE);
+				if (o instanceof Session.Auction a) {
+					NovaHud.rr(g, cx + 282, ry + 6, 40, 20, 6, 0x30FFFFFF);
+					NovaHud.text(g, font, "Redo", cx + 282 + (40 - NovaHud.tw(font, "Redo", 1f)) / 2, ry + 12, 1f, NovaHud.MUTED);
+					long secs = Math.max(0, (a.endMs - nowMs + 999) / 1000);
+					NovaHud.pill(g, font, secs + "s", cx + 330, ry + 9, NovaHud.BORDER, NovaHud.WHITE, 0.85f);
+				} else {
+					Session.Record r = (Session.Record) o;
+					if (r.top > 0) NovaHud.pill(g, font, "Sold", cx + 330, ry + 9, 0xFF1F8F4E, NovaHud.WHITE, 0.85f);
+					else NovaHud.pill(g, font, "No bids", cx + 320, ry + 9, NovaHud.PILL, NovaHud.MUTED, 0.85f);
+				}
+				g.pose().popMatrix();
 			}
+			if (d.size() > ROWS) NovaHud.text(g, font, "Scroll for more (" + d.size() + ")", cx, y0 + H - 14, 0.75f, NovaHud.MUTED);
 		} else if (tab == 2) {
 			g.drawString(font, "Bets (" + s.bets.size() + ")", cx, y0 + 14, NovaHud.WHITE);
 			if (s.bets.isEmpty()) g.drawString(font, "No bets yet. Turn the tracker ON in Gamble.", cx, y0 + 44, NovaHud.MUTED);
@@ -246,7 +337,7 @@ public class NovaScreen extends Screen {
 			g.drawString(font, "Only you see this (chat messages with your name).", cx, y0 + 198, NovaHud.MUTED);
 		} else {
 			g.drawString(font, "Settings", cx, y0 + 14, NovaHud.WHITE);
-			g.drawString(font, "Saved automatically in config/nova.json", cx, y0 + 216, NovaHud.MUTED);
+			g.drawString(font, "Saved automatically in config/nova.json", cx, y0 + H - 12, NovaHud.MUTED);
 		}
 
 		g.pose().popMatrix();
