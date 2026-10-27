@@ -27,7 +27,7 @@ public final class Sfx {
 
 	private static void play(Holder<SoundEvent> e, float pitch, float v) {
 		if (!on()) return;
-		Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(e, pitch, vol(v)));
+		Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(e.value(), pitch, vol(v)));
 	}
 
 	public static void bid() { play(SoundEvents.NOTE_BLOCK_PLING, 1.3f, 0.9f); }
