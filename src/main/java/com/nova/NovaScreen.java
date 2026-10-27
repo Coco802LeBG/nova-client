@@ -45,7 +45,7 @@ public class NovaScreen extends Screen {
 	}
 
 	private void add(String label, int x, int y, int w, Runnable r) {
-		addRenderableWidget(Button.builder(c(label), b -> r.run()).bounds(x, y, w, 20).build());
+		addRenderableWidget(Button.builder(c(label), b -> { Sfx.click(); r.run(); }).bounds(x, y, w, 20).build());
 	}
 
 	private static String onoff(boolean b) {
@@ -125,6 +125,7 @@ public class NovaScreen extends Screen {
 				if (o instanceof Session.Record rec) {
 					int ry = y0 + 58 + i * 34;
 					Button rb = Button.builder(c("Redo"), b -> {
+						Sfx.click();
 						if (s.cur == null) { s.redo(rec, SECS[secI]); s.history.remove(rec); onClose(); }
 					}).bounds(cx + 282, ry + 6, 40, 20).build();
 					rb.active = s.cur == null;
@@ -183,8 +184,9 @@ public class NovaScreen extends Screen {
 			add("Volume: " + (int) Math.round(cfg.soundVolume * 100) + "%", rx, y + 6 * d, bw, () -> { cfg.soundVolume = nxt(cfg.soundVolume, VOLS); upd(); });
 			add("Tick sounds: " + onoff(cfg.soundTick), lx, y + 7 * d, bw, () -> { cfg.soundTick = !cfg.soundTick; upd(); });
 			add("Menu sound: " + onoff(cfg.soundMenu), rx, y + 7 * d, bw, () -> { cfg.soundMenu = !cfg.soundMenu; upd(); });
-			add("Test sounds", lx, y + 8 * d, bw, Sfx::test);
-			add("Reload config", rx, y + 8 * d, bw, () -> { s.reload(); rebuildWidgets(); });
+			add("Click sound: " + onoff(cfg.soundClick), lx, y + 8 * d, bw, () -> { cfg.soundClick = !cfg.soundClick; upd(); });
+			add("Test sounds", rx, y + 8 * d, bw, Sfx::test);
+			add("Reload config", lx, y + 9 * d, bw, () -> { s.reload(); rebuildWidgets(); });
 		}
 	}
 
