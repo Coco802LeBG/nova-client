@@ -38,6 +38,9 @@ public final class NovaHud {
 	private static Session.Record lastBanner;
 	private static double shown = 0;
 	private static long lastTarget = 0;
+	private static long lastTopSeen = -1;
+	private static float bidFlash = 0, tickPop = 0;
+	private static int lastSec = -1;
 
 	private static final class Pop { String txt; int col; float life = 1.4f; }
 	private static final class Conf { float x, y, vx, vy, life; int col; }
@@ -140,6 +143,14 @@ public final class NovaHud {
 		item(g, st, x + off, y + off, sc);
 	}
 
+	/** Moving light sweep over a pill or bar. */
+	static void shimmer(GuiGraphics g, int x, int y, int w, int h, long now) {
+		int span = w + 40;
+		int sx = (int) ((now / 14) % span) - 20;
+		int x1 = Math.max(x, x + sx), x2 = Math.min(x + w, x + sx + 10);
+		if (x2 > x1) g.fill(x1, y + 1, x2, y + h - 1, 0x30FFFFFF);
+	}
+
 	static void bar(GuiGraphics g, int x, int y, int w, int h, double frac, int color) {
 		rr(g, x, y, w, h, h / 2, 0x33FFFFFF);
 		int fw = Math.max(h, (int) (w * Math.max(0, Math.min(1, frac))));
@@ -217,27 +228,52 @@ public final class NovaHud {
 				pill(g, f, nc, x + w - pw - 8, y + 12, PILL, ACCENT2, 0.8f);
 			} else if (ad != null) {
 				double left = Math.max(0, (ad.endMs - now) / 1000.0);
-				boolean urgent = left < 5 && a != null;
-				int col = urgent ? lerp(RED, 0xFFFFB3BA, pulse) : BORDER;
+				boolean urgent = left < 8 && a != null;
+				double frac = left / ad.totalSec;
+				int sec = (int) Math.ceil(left);
+				if (ad.top != lastTopSeen) {
+					if (ad.top > 0 && lastTopSeen >= 0) bidFlash = 1f;
+					lastTopSeen = ad.top;
+				}
+				if (sec != lastSec) {
+					lastSec = sec;
+					tickPop = 1f;
+					if (a != null && sec >= 1 && sec <= 5) Sfx.tick(sec);
+				}
+				bidFlash = Math.max(0f, bidFlash - dt * 2.2f);
+				tickPop = Math.max(0f, tickPop - dt * 5f);
+				int col = urgent ? lerp(RED, 0xFFFFB3BA, pulse) : lerp(BORDER, 0xFFFF9A3C, (float) Math.max(0, (0.5 - frac) * 2));
+				col = lerp(col, WHITE, bidFlash * 0.45f);
 				panel(g, x, y, w, h, col);
 				iconBox(g, ad.stack, x + 8, y + 8, 38);
-				String title = ad.top > 0 ? ad.by + " \u2022 $" + Money.fmt(ad.top) : "No bids";
-				text(g, f, title, x + 54, y + 11, 1.2f, WHITE);
-				pill(g, f, "Min " + Money.fmt(ad.min), x + 54, y + 26, PILL, WHITE, 0.85f);
-				String t = String.format("%d:%02d", (int) left / 60, (int) left % 60);
+				boolean hasBid = ad.top > 0;
+				text(g, f, hasBid ? ad.by : "No bids", x + 54, y + 11, 1.2f, hasBid ? WHITE : 0xFFC9C3DA);
+				int px2 = x + 54;
+				if (hasBid) {
+					boolean over = ad.worth > 0 && ad.top >= ad.worth;
+					int bb = over ? 0xFF1F8F4E : lerp(BG_DARK, BORDER, 0.55f);
+					bb = lerp(bb, WHITE, bidFlash * 0.5f);
+					px2 += pill(g, f, "Bid " + Money.fmt(ad.top), px2, y + 26, bb, WHITE, 0.85f + 0.12f * bidFlash) + 5;
+				}
+				pill(g, f, "Min " + Money.fmt(ad.min), px2, y + 26, PILL, WHITE, 0.85f);
+				String t = left < 60 ? String.valueOf(sec) : String.format("%d:%02d", sec / 60, sec % 60);
+				float ts = 1.4f + 0.3f * tickPop;
 				int tpw = Math.max(56, tw(f, t, 1.4f) + 22);
 				rr(g, x + w - tpw - 8, y + 12, tpw, 26, 13, col);
 				rr(g, x + w - tpw - 7, y + 13, tpw - 2, 24, 12, BG_DARK);
-				text(g, f, t, x + w - tpw - 8 + (tpw - tw(f, t, 1.4f)) / 2, y + 20, 1.4f, urgent ? lerp(RED, WHITE, 1 - pulse) : WHITE);
+				text(g, f, t, x + w - tpw - 8 + (tpw - tw(f, t, ts)) / 2, y + 25 - (int) (4 * ts), ts, urgent ? lerp(RED, WHITE, 1 - pulse) : WHITE);
 				int dotA = (int) (140 + 115 * (an ? pulse : 1f));
 				g.fill(x + 10, y + 49, x + 13, y + 52, alpha(col, dotA));
 				text(g, f, ad.totalSec + " Seconds To Make Order", x + 17, y + 47, 0.85f, WHITE);
 				if (ad.worth > 0) {
 					String wt = "Worth " + Money.fmt(ad.worth);
 					int pw = tw(f, wt, 0.85f) + 14;
-					pill(g, f, wt, x + w - pw - 8, y + 43, col, WHITE, 0.85f);
+					int wx = x + w - pw - 8;
+					pill(g, f, wt, wx, y + 43, lerp(BG_DARK, col, 0.8f), WHITE, 0.85f);
+					if (an) shimmer(g, wx, y + 43, pw, 13, now);
 				}
-				bar(g, x + 8, y + h - 17, w - 16, 5, left / ad.totalSec, col);
+				bar(g, x + 8, y + h - 17, w - 16, 5, frac, col);
+				if (an) shimmer(g, x + 8, y + h - 17, Math.max(5, (int) ((w - 16) * Math.min(1.0, frac))), 5, now);
 				String cl = "Nova Client";
 				text(g, f, cl, x + (w - tw(f, cl, 0.65f)) / 2, y + h - 10, 0.65f, MUTED);
 			}
