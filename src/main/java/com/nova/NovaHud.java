@@ -332,6 +332,8 @@ public final class NovaHud {
 			pops.clear();
 		}
 
+		MusicHud.render(g, f, sw, gh, dt, now, an, spd);
+
 		// ===== Confetti =====
 		for (int i = conf.size() - 1; i >= 0; i--) {
 			Conf p = conf.get(i);
