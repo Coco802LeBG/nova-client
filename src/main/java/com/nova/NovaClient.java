@@ -37,6 +37,8 @@ public class NovaClient implements ClientModInitializer {
 		});
 
 		ClientReceiveMessageEvents.MODIFY_GAME.register((msg, overlay) -> overlay ? msg : Nick.apply(msg));
+		if (Session.I.cfg.musicEnabled) Media.I.start();
+
 		ClientSendMessageEvents.COMMAND.register(Session.I::onCommand);
 
 		HudElementRegistry.attachElementAfter(VanillaHudElements.CHAT, Identifier.fromNamespaceAndPath("nova", "hud"), NovaHud::render);
