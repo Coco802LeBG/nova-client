@@ -27,7 +27,7 @@ public final class Sfx {
 
 	private static void play(Holder<SoundEvent> e, float pitch, float v) {
 		if (!on()) return;
-		Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(e.value(), pitch, vol(v)));
+		Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(e, pitch, vol(v)));
 	}
 
 	public static void bid() { play(SoundEvents.NOTE_BLOCK_PLING, 1.3f, 0.9f); }
@@ -55,22 +55,16 @@ public final class Sfx {
 		if (Session.I.cfg.soundMenu) play(SoundEvents.NOTE_BLOCK_CHIME, 1.6f, 0.4f);
 	}
 
-	/** Small UI feedback for buttons. */
-	public static void click() {
-		if (Session.I.cfg.soundClick) play(SoundEvents.UI_BUTTON_CLICK, 1.0f, 0.45f);
-	}
-
 	/** Plays the next sound in the list each time you press "Test sounds". */
 	public static void test() {
-		switch (testIdx++ % 8) {
+		switch (testIdx++ % 7) {
 			case 0 -> start();
 			case 1 -> bid();
 			case 2 -> tick(1);
 			case 3 -> win();
 			case 4 -> loss();
 			case 5 -> sold();
-			case 6 -> noBids();
-			default -> click();
+			default -> noBids();
 		}
 	}
 }
