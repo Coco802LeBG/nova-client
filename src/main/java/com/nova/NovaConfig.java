@@ -36,6 +36,16 @@ public class NovaConfig {
 	public String nickStarColor = "Yellow";   // same colors as the name, incl. Rainbow / Theme
 	public String nickStarPos = "Before";     // Before, After, Both
 
+	// ---- Music (now playing + lyrics) ----
+	public boolean musicEnabled = true;
+	public boolean musicCard = true;
+	public boolean musicLyrics = true;
+	public String musicCardPos = "TL";        // TL, TR, BL, BR
+	public String lyricsPos = "Bottom";       // Bottom, Middle, Top
+	public int lyricsLines = 3;               // 1, 3, 5
+	public double lyricsScale = 1.0;
+	public int lyricsOffsetMs = 0;            // shift lyrics earlier (-) or later (+)
+
 	// ---- Sounds ----
 	public boolean sounds = true;
 	public double soundVolume = 0.8;
