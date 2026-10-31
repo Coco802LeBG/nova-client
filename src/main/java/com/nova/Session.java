@@ -97,6 +97,7 @@ public final class Session {
 		a.totalSec = sec;
 		a.endMs = now() + sec * 1000L;
 		cur = a;
+		Sfx.start();
 	}
 
 	/** Shows the win banner (with confetti) without touching any stats. */
@@ -123,6 +124,7 @@ public final class Session {
 		a.totalSec = sec;
 		a.endMs = now() + sec * 1000L;
 		cur = a;
+		Sfx.start();
 	}
 
 	public void tick(Minecraft mc) {
@@ -138,11 +140,14 @@ public final class Session {
 		r.top = cur.top;
 		r.by = cur.by;
 		if (r.top > 0) {
+			Sfx.sold();
 			auctionSales += r.top;
 			lastDelta = r.top;
 			banner = r;
 			bannerUntil = now() + 6000;
 			mc.keyboardHandler.setClipboard(r.by);
+		} else {
+			Sfx.noBids();
 		}
 		history.add(0, r);
 		if (history.size() > 30) history.remove(history.size() - 1);
@@ -167,6 +172,7 @@ public final class Session {
 				if (amt >= cur.min && amt > cur.top) {
 					cur.top = amt;
 					cur.by = m.group(1);
+					Sfx.bid();
 					if (cur.endMs - now() < 5000) cur.endMs = now() + 5000;
 				}
 			}
@@ -237,6 +243,7 @@ public final class Session {
 			p.bet.win = false;
 			p.bet.amt = loss;
 			lastDelta = -loss;
+			Sfx.loss();
 			pending.remove(who);
 		} else if (b >= p.amt * 0.99) {
 			// refund of the same amount = push, not a win
@@ -263,6 +270,7 @@ public final class Session {
 	public void gamble(boolean win, long amount) {
 		if (win) { wins++; gambleNet += amount; lastDelta = amount; }
 		else { losses++; gambleNet -= amount; lastDelta = -amount; }
+		if (win) Sfx.win(); else Sfx.loss();
 		gambleLog.add(new long[] { win ? 1 : 0, amount });
 		Bet b = new Bet();
 		b.amt = amount;
