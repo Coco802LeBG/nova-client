@@ -17,10 +17,12 @@ public class NovaScreen extends Screen {
 	private static final long[] MINS = { 1, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000 };
 	private static final int[] SECS = { 10, 15, 30, 60 };
 	private static final long[] WORTHS = { 0, 1_000_000, 10_000_000, 100_000_000, 500_000_000, 1_000_000_000 };
-	private static final String[] TABS = { "Auction", "Recent", "Bets", "Gamble", "Balance", "Nametag", "Settings" };
+	private static final String[] TABS = { "Auction", "Recent", "Bets", "Gamble", "Balance", "Music", "Nametag", "Settings" };
 	private static final double[] SPEEDS = { 0.5, 1.0, 1.5, 2.0 };
 	private static final double[] VOLS = { 0.25, 0.5, 0.8, 1.0 };
 	private static final double[] SCALES = { 0.75, 1.0, 1.25, 1.5 };
+	private static final double[] OFFS = { -1000, -500, -250, 0, 250, 500, 1000 };
+	private static final String[] LPOS = { "Bottom", "Middle", "Top" };
 	private static final String[] CORNERS = { "TL", "TR", "BL", "BR" };
 
 	private static int tab = 0, minI = 3, secI = 1, worthI = 0;
@@ -144,6 +146,23 @@ public class NovaScreen extends Screen {
 		} else if (tab == 4) {
 			add("Reset balance", cx, y0 + 168, 170, s::resetBalance);
 		} else if (tab == 5) {
+			int lx = cx, rx = cx + 156, y = y0 + 34, d = 22, bw = 150;
+			add("Music: " + onoff(cfg.musicEnabled), lx, y, bw, () -> {
+				cfg.musicEnabled = !cfg.musicEnabled;
+				if (cfg.musicEnabled) Media.I.start(); else Media.I.stop();
+				upd();
+			});
+			add("Card: " + onoff(cfg.musicCard), rx, y, bw, () -> { cfg.musicCard = !cfg.musicCard; upd(); });
+			add("Lyrics: " + onoff(cfg.musicLyrics), lx, y + d, bw, () -> { cfg.musicLyrics = !cfg.musicLyrics; upd(); });
+			add("Lyrics lines: " + cfg.lyricsLines, rx, y + d, bw, () -> { cfg.lyricsLines = cfg.lyricsLines == 1 ? 3 : cfg.lyricsLines == 3 ? 5 : 1; upd(); });
+			add("Lyrics position: " + cfg.lyricsPos, lx, y + 2 * d, bw, () -> {
+				for (int i = 0; i < LPOS.length; i++) if (LPOS[i].equals(cfg.lyricsPos)) { cfg.lyricsPos = LPOS[(i + 1) % LPOS.length]; break; }
+				upd();
+			});
+			add("Card corner: " + cfg.musicCardPos, rx, y + 2 * d, bw, () -> { cfg.musicCardPos = nextCorner(cfg.musicCardPos); upd(); });
+			add("Lyrics size: " + cfg.lyricsScale + "x", lx, y + 3 * d, bw, () -> { cfg.lyricsScale = nxt(cfg.lyricsScale, SCALES); upd(); });
+			add("Sync: " + (cfg.lyricsOffsetMs > 0 ? "+" : "") + cfg.lyricsOffsetMs + "ms", rx, y + 3 * d, bw, () -> { cfg.lyricsOffsetMs = (int) nxt(cfg.lyricsOffsetMs, OFFS); upd(); });
+		} else if (tab == 6) {
 			int lx = cx, rx = cx + 156, y = y0 + 34, bw = 150;
 			add("Nametag: " + onoff(cfg.nickEnabled), lx, y, bw, () -> { cfg.nickEnabled = !cfg.nickEnabled; upd(); });
 			add("Bold: " + onoff(cfg.nickBold), rx, y, bw, () -> { cfg.nickBold = !cfg.nickBold; upd(); });
@@ -330,6 +349,27 @@ public class NovaScreen extends Screen {
 			g.drawString(font, "Per hour: " + Money.signed(perH), cx, y0 + 138, NovaHud.ACCENT2);
 			g.drawString(font, "Sent counts /pay commands you type.", cx, y0 + 198, NovaHud.MUTED);
 		} else if (tab == 5) {
+			Media m = Media.I;
+			Media.Track tr = m.track;
+			g.drawString(font, "Music & lyrics", cx, y0 + 14, NovaHud.WHITE);
+			g.drawString(font, "Status: " + m.status, cx, y0 + 130, NovaHud.MUTED);
+			if (tr == null) {
+				g.drawString(font, "Nothing playing. Works with any app (Spotify, YouTube, VLC...).", cx, y0 + 144, NovaHud.MUTED);
+			} else {
+				String nm = tr.title + (tr.artist.isEmpty() ? "" : " - " + tr.artist);
+				if (nm.length() > 60) nm = nm.substring(0, 60) + "...";
+				g.drawString(font, nm, cx, y0 + 144, NovaHud.WHITE);
+				g.drawString(font, (tr.playing ? "Playing" : "Paused") + (tr.app.isEmpty() ? "" : "  \u2022  " + tr.app), cx, y0 + 158, NovaHud.ACCENT2);
+				String ls = switch (m.lstate) {
+					case FOUND -> "found (" + m.lines.size() + " lines)";
+					case LOADING -> "searching...";
+					case MISSING -> "no synced lyrics found";
+					default -> "-";
+				};
+				g.drawString(font, "Lyrics: " + ls, cx, y0 + 172, m.lstate == Media.LState.FOUND ? NovaHud.GREEN : NovaHud.MUTED);
+			}
+			g.drawString(font, "Lyrics come from lrclib.net (song + artist are sent to look them up).", cx, y0 + H - 12, NovaHud.MUTED);
+		} else if (tab == 6) {
 			g.drawString(font, "Nametag", cx, y0 + 14, NovaHud.WHITE);
 			g.drawString(font, "Extra text before / after (optional)", cx, y0 + 128, NovaHud.MUTED);
 			g.drawString(font, "Preview:", cx, y0 + 172, NovaHud.MUTED);
