@@ -51,6 +51,7 @@ public class NovaConfig {
 	public double soundVolume = 0.8;
 	public boolean soundTick = true;
 	public boolean soundMenu = true;
+	public boolean soundClick = true;
 
 	public int configVersion = 0;
 	private static final int CURRENT = 2;
